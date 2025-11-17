@@ -72,7 +72,7 @@ export default function Home() {
             limit: 10,
             nextToken: loadMore ? nextToken : undefined
           }
-        })
+        }) as any
 
         if (result.data?.getNotes) {
           awsNotes = result.data.getNotes.items || []
@@ -152,7 +152,7 @@ export default function Home() {
             text: newNote.text,
             sentiment: newNote.sentiment
           }
-        })
+        }) as any
         console.log('✅ Note saved to AWS DynamoDB!')
         awsSaved = true
       } catch (awsError) {
