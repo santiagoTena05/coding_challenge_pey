@@ -1,62 +1,100 @@
-# 🧗 Coding Challenge
+# 📝 Notes with Sentiments - Aplicación Web
 
-¡Gracias por tu interés en unirte a nuestro equipo! Esta prueba está diseñada para evaluar tus habilidades técnicas, tu forma de resolver problemas, tu capacidad de aprender y tu habilidad para seguir instrucciones con claridad.
+Aplicación web para publicar y leer notas con sentimientos, construida con React, Next.js, AWS AppSync, y DynamoDB.
 
-> Debes ser capaz de resolver problemas y construir soluciones en una tercera parte del tiempo que tardaría un desarrollador competente promedio, manteniendo altos estándares de calidad.
+## 🎯 Descripción
 
-## 🎯 Objetivo
+Esta aplicación permite a los usuarios:
+- ✅ **Crear notas** con texto libre y selección de sentimiento (feliz, triste, neutral, enojado)
+- ✅ **Visualizar notas existentes** ordenadas por fecha de creación
+- ✅ **Filtrar notas por sentimiento** usando botones de filtro intuitivos
+- ✅ **Persistencia de datos** tanto en AWS DynamoDB como localStorage como fallback
 
-Crear una aplicación web que permita publicar y leer notas con un "sentimiento". Esta aplicación debe ser completamente funcional y desplegada en producción. Opcionalmente, puedes agregar un notebook de analítica y desplegar el backend como infraestructura como código.
+## 🚀 Demo en Vivo
 
-## 🗓️ Alcance
+🔗 **URL de Producción:** [Próximamente en AWS Amplify]
 
-- Tiempo estimado: **2 días de trabajo**
-- Modalidad: **Trabajo individual**
-- Puedes usar cualquier herramienta de inteligencia artificial como apoyo.
+## 🏗️ Arquitectura
 
-## 🧱 Contenido del repositorio
-
-```bash
-.
-├── README.md
-├── website/              # Código del frontend con React con Next.js y Tailwind CSS
-├── backend/              # (Opcional) Infraestructura como código con CDK
-└── analytics.ipynb       # (Opcional) Jupyter Notebook con analíticos básicos
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   React + Next  │    │   AWS AppSync    │    │   DynamoDB      │
+│   Frontend      │◄──►│   GraphQL API    │◄──►│   Database      │
+│   (Tailwind)    │    │                  │    │                 │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
 
-### 📂 Detalles
+### Stack Tecnológico
 
-- **Haz un fork** de este repositorio y trabaja desde ahí.
-- El código del **frontend** debe vivir en el folder `website/`.
-- Puedes implementar el **backend** directamente en la consola de AWS (AppSync, DynamoDB y Amplify) o usar **CDK** para definirlo como infraestructura como código (IaC) en el folder `backend/`.
-- La aplicación debe estar desplegada en producción con **Amplify**.
+- **Frontend**: React 18 + Next.js 14 + TypeScript + Tailwind CSS
+- **API**: AWS AppSync (GraphQL)
+- **Base de Datos**: AWS DynamoDB
+- **Hosting**: AWS Amplify
+- **Autenticación**: API Key (AWS AppSync)
+- **IDs**: ULID para ordenamiento cronológico
 
-## 🖥️ Requisitos funcionales (obligatorios)
+## 📂 Estructura del Proyecto
 
-La aplicación debe permitir:
+```
+.
+├── CLAUDE.md              # Guía de desarrollo
+├── README.md              # Este archivo
+├── website/               # Frontend Next.js
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── components/
+│   │   │   │   ├── NoteForm.tsx      # Formulario para crear notas
+│   │   │   │   ├── NoteCard.tsx      # Tarjeta individual de nota
+│   │   │   │   ├── NotesList.tsx     # Lista de notas con loading
+│   │   │   │   └── SentimentFilter.tsx # Filtros por sentimiento
+│   │   │   ├── lib/
+│   │   │   │   └── graphql/
+│   │   │   │       └── operations.ts  # Queries y mutations GraphQL
+│   │   │   ├── types/
+│   │   │   │   └── note.ts           # Definiciones TypeScript
+│   │   │   ├── globals.css
+│   │   │   ├── layout.tsx
+│   │   │   └── page.tsx              # Página principal
+│   │   └── aws-exports.js            # Configuración AWS AppSync
+│   ├── package.json
+│   ├── tailwind.config.ts
+│   └── next.config.js
+├── backend/               # (Opcional) CDK Infrastructure
+└── analytics.ipynb       # (Opcional) Análisis de datos
+```
 
-1. **Crear una nota** con:
-   - Texto libre
-   - Un sentimiento: `happy`, `sad`, `neutral`, `angry`
+## 🔧 Características Implementadas
 
-2. **Visualizar notas existentes**:
-   - Mostrar las notas paginadas en bloques de 10
-   - Posibilidad de filtrar por sentimiento
-   - Mostrar la fecha de creación de la nota
+### ✅ Funcionalidades Principales
 
-3. **Despliegue**:
-   - La aplicación debe estar **en producción**
+1. **Creación de Notas**
+   - Formulario con textarea para texto libre
+   - Selector visual de sentimientos con emojis
+   - Validación de campos requeridos
+   - Generación automática de IDs únicos (ULID)
 
-## ⚙️ Requisitos técnicos (obligatorios)
+2. **Visualización de Notas**
+   - Lista ordenada por fecha de creación (más recientes primero)
+   - Tarjetas con diseño responsive
+   - Indicadores visuales por sentimiento (colores + emojis)
+   - Formato de fecha legible
 
-- **Frontend**: [React](https://react.dev/) con [Next.js](https://nextjs.org/) y [Tailwind CSS](https://tailwindcss.com/)
-- **API**: [GraphQL](https://aws.amazon.com/graphql/) sobre [AppSync](https://aws.amazon.com/appsync/)
-- **Base de datos**: [DynamoDB](https://aws.amazon.com/dynamodb/)
-- **Hosting**: [Amplify](https://aws.amazon.com/amplify/hosting/)
+3. **Filtrado por Sentimiento**
+   - Botones de filtro con conteo de notas
+   - Estados visuales activos/inactivos
+   - Opción "Todas" para ver sin filtros
 
-### 🔧 Esquema esperado de GraphQL
+4. **Persistencia Híbrida**
+   - Almacenamiento principal en AWS DynamoDB
+   - Fallback automático a localStorage
+   - Sincronización entre ambos sistemas
+
+### ⚙️ Esquema GraphQL
 
 ```graphql
+# Scalar types
+scalar AWSDateTime
+
 enum Sentiment {
   happy
   sad
@@ -84,50 +122,261 @@ type Query {
 type Mutation {
   createNote(text: String!, sentiment: Sentiment!): Note
 }
+
+# Schema definition
+schema {
+  query: Query
+  mutation: Mutation
+}
 ```
 
-> Te recomendamos que utilices [ULID](https://github.com/ulid/spec) para generar los IDs de las notas. Esto va a ser útil para filtrar los resultados en base a tiempo.
+### 🔧 Resolvers de AppSync
 
-## 🏆 Extras (opcionales)
+#### Resolver createNote (Mutation.createNote)
 
-Hay dos entregables opcionales que puedes hacer para demostrar habilidades excepcionales.
+```javascript
+import { util } from '@aws-appsync/utils';
 
-### 📊 Notebook de analítica
+export function request(ctx) {
+    const { text, sentiment } = ctx.args;
+    const id = util.autoUlid();
+    const now = util.time.nowISO8601();
 
-Crea un archivo `analytics.ipynb` con visualizaciones de las notas:
+    return {
+        operation: 'PutItem',
+        key: {
+            id: util.dynamodb.toDynamoDB(id)
+        },
+        attributeValues: {
+            text: util.dynamodb.toDynamoDB(text),
+            sentiment: util.dynamodb.toDynamoDB(sentiment),
+            dateCreated: util.dynamodb.toDynamoDB(now)
+        }
+    };
+}
 
-- Un **histograma** de cantidad de notas por día
-- Un **gráfico circular** con la proporción de sentimientos publicados
+export function response(ctx) {
+    if (ctx.error) {
+        util.error(ctx.error.message, ctx.error.type);
+    }
 
-### 🚀 Infraestructura como código
+    return ctx.result;
+}
+```
 
-Utiliza CDK para crear el backend de la aplicación dentro del folder `backend/`.
+#### Resolver getNotes (Query.getNotes)
 
-> Si no utilizas CDK, crea todos los recursos a través de la consola de AWS.
+```javascript
+import { util } from '@aws-appsync/utils';
 
-## ✅ Entregables
+export function request(ctx) {
+    const { sentiment, limit = 10, nextToken } = ctx.args;
 
-1. URL de la aplicación en producción (AWS Amplify)
-2. Enlace al repositorio con tu fork
-3. (Opcional) Notebook con analítica
-4. (Opcional) Infraestructura como código
+    // Base scan operation
+    const scanRequest = {
+        operation: 'Scan',
+        limit: limit
+    };
 
-## 🧠 Qué evaluaremos
+    // Add pagination
+    if (nextToken) {
+        scanRequest.nextToken = nextToken;
+    }
 
-- Funcionamiento y calidad visual de la aplicación
-- Claridad del código y estructura del proyecto
-- Uso correcto de AWS y el stack propuesto
-- Autonomía para aprender nuevas tecnologías (GraphQL, DynamoDB, CDK, etcétera)
-- Buenas prácticas de versionado con Git y GitHub
+    // Add filter for sentiment if provided
+    if (sentiment) {
+        scanRequest.filter = {
+            expression: 'sentiment = :sentiment',
+            expressionValues: {
+                ':sentiment': util.dynamodb.toDynamoDB(sentiment)
+            }
+        };
+    }
 
-## 💡 Tips
+    return scanRequest;
+}
 
-- Documenta cualquier decisión técnica que hayas tomado
-- Si algo no está claro, elige una solución razonada y explícalo
-- Haz un UI simple, cuida usabilidad y presentación
-- Haz `commits` lógicos, claros y estructurados
-- Usa IA a tu favor, pero entiende lo que estás haciendo
+export function response(ctx) {
+    if (ctx.error) {
+        util.error(ctx.error.message, ctx.error.type);
+    }
 
----
+    // Convert sentiment values from uppercase to lowercase
+    const items = (ctx.result.items || []).map(item => {
+        if (item.sentiment) {
+            item.sentiment = item.sentiment.toLowerCase();
+        }
+        return item;
+    });
 
-¡Éxito! Estamos emocionados de ver tu trabajo 🚀
+    return {
+        items: items,
+        nextToken: ctx.result.nextToken || null,
+        scannedCount: ctx.result.scannedCount || 0
+    };
+}
+```
+
+### 🎨 UI/UX
+
+- **Design System**: Tailwind CSS con paleta de colores semántica
+- **Responsive**: Adaptable a móvil, tablet y desktop
+- **Accesibilidad**: Contraste adecuado, labels semánticos
+- **Estados**: Loading, error, y empty states
+- **Paleta de Sentimientos**:
+  - 😊 Feliz: Verde/Amarillo
+  - 😢 Triste: Azul
+  - 😐 Neutral: Gris
+  - 😠 Enojado: Rojo
+
+## 🛠️ Instalación y Desarrollo
+
+### Prerrequisitos
+
+- Node.js 18+ y npm
+- Cuenta de AWS con credenciales configuradas
+- Git
+
+### Setup Local
+
+1. **Clonar el repositorio**
+   ```bash
+   git clone <repository-url>
+   cd coding_challenge_pey
+   ```
+
+2. **Instalar dependencias**
+   ```bash
+   cd website
+   npm install
+   ```
+
+3. **Configurar AWS**
+   - Crear AppSync API en AWS Console
+   - Configurar DynamoDB table
+   - Actualizar `src/aws-exports.js` con tus credenciales
+
+4. **Ejecutar en desarrollo**
+   ```bash
+   npm run dev
+   ```
+
+5. **Abrir en navegador**
+   ```
+   http://localhost:3000
+   ```
+
+### Scripts Disponibles
+
+```bash
+npm run dev          # Servidor de desarrollo
+npm run build        # Build para producción
+npm run start        # Servidor de producción
+npm run lint         # Linting con ESLint
+npm run type-check   # Verificación TypeScript
+```
+
+## 🗄️ Configuración AWS
+
+### AppSync API
+
+1. **Endpoint**: `https://6bxpuyzrzndhzj74er4nrxqfru.appsync-api.us-east-1.amazonaws.com/graphql`
+2. **Región**: `us-east-1`
+3. **Autenticación**: API Key
+4. **Resolvers**: JavaScript para DynamoDB
+
+### DynamoDB Table
+
+- **Nombre**: `Notes-dev`
+- **Partition Key**: `id` (String)
+- **Atributos**: `text`, `sentiment`, `dateCreated`
+
+## 🚀 Despliegue
+
+### AWS Amplify
+
+1. Conectar repositorio GitHub
+2. Configurar build settings para Next.js
+3. Configurar variables de entorno
+4. Deploy automático en cada push
+
+### Build Settings
+```yaml
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - cd website
+        - npm ci
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    baseDirectory: website/.next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - website/node_modules/**/*
+```
+
+## 📊 Estado del Proyecto
+
+### ✅ Completado
+
+- [x] Setup de proyecto Next.js + TypeScript + Tailwind
+- [x] Componentes UI para crear y mostrar notas
+- [x] Integración con AWS AppSync GraphQL
+- [x] Almacenamiento en DynamoDB
+- [x] Filtrado por sentimiento (backend + frontend)
+- [x] Paginación completa (10 notas por página)
+- [x] Sistema de fallback localStorage
+- [x] UI responsive y accesible
+- [x] Manejo de errores y loading states
+- [x] Schema GraphQL según especificaciones
+- [x] Resolvers JavaScript optimizados
+
+### 🔄 En Progreso
+
+- [ ] Despliegue a AWS Amplify
+
+### 📋 Por Hacer (Opcional)
+
+- [ ] Notebook de analítica (`analytics.ipynb`)
+- [ ] Infraestructura como código con CDK
+- [ ] Tests unitarios y de integración
+- [ ] Optimización de rendimiento
+
+## 🧠 Decisiones Técnicas
+
+### 1. **ULID para IDs**
+Elegí ULID sobre UUID porque permite ordenamiento cronológico natural, útil para mostrar notas por fecha.
+
+### 2. **Híbrido AWS + localStorage**
+Implementé un sistema de fallback que permite funcionalidad offline y mejor UX durante problemas de conectividad.
+
+### 3. **TypeScript Estricto**
+Uso TypeScript con configuración estricta para mejor DX y prevención de errores.
+
+### 4. **Componentes Modulares**
+Separé la UI en componentes reutilizables siguiendo principios de responsabilidad única.
+
+### 5. **Error Boundaries**
+Manejo de errores tanto a nivel de componente como de aplicación.
+
+## 🐛 Solución de Problemas
+
+### Errores Comunes
+
+1. **"Variable 'sentiment' has an invalid value"**
+   - Verificar que enum values coincidan entre frontend y backend
+   - Usar uppercase en GraphQL schema
+
+2. **"Network error"**
+   - Verificar API key en `aws-exports.js`
+   - Confirmar que AppSync API esté activo
+
+3. **"Table doesn't exist"**
+   - Verificar que DynamoDB table existe
+   - Confirmar nombre de tabla en resolvers
