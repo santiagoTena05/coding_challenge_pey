@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Keep default Next.js mode for better Amplify compatibility
+  output: 'standalone',
   trailingSlash: true,
   images: {
     unoptimized: true
