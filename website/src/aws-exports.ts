@@ -1,10 +1,10 @@
 const awsConfig = {
   API: {
     GraphQL: {
-      endpoint: 'https://6bxpuyzrzndhzj74er4nrxqfru.appsync-api.us-east-1.amazonaws.com/graphql',
-      region: 'us-east-1',
+      endpoint: process.env.NEXT_PUBLIC_APPSYNC_ENDPOINT!,
+      region: process.env.NEXT_PUBLIC_APPSYNC_REGION!,
       defaultAuthMode: 'apiKey' as const,
-      apiKey: 'da2-5shpvgdct5fpvjp6kfayrgy4u4'
+      apiKey: process.env.NEXT_PUBLIC_APPSYNC_API_KEY!
     }
   }
 };
