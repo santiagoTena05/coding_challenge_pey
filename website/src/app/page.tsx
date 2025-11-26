@@ -11,7 +11,7 @@ import { createNoteMutation, getNotesQuery } from '@/app/lib/graphql/operations'
 import awsConfig from '../aws-exports'
 
 Amplify.configure(awsConfig)
-const client = generateClient()
+const client = generateClient({ authMode: 'apiKey' })
 
 // Mock data for display (until resolvers are fully working)
 const mockNotes: Note[] = [
@@ -71,7 +71,8 @@ export default function Home() {
             sentiment: sentiment,
             limit: 10,
             nextToken: loadMore ? nextToken : undefined
-          }
+          },
+          authMode: 'apiKey'
         }) as any
 
         if (result.data?.getNotes) {
@@ -151,7 +152,8 @@ export default function Home() {
           variables: {
             text: newNote.text,
             sentiment: newNote.sentiment
-          }
+          },
+          authMode: 'apiKey'
         }) as any
         console.log('✅ Note saved to AWS DynamoDB!')
         awsSaved = true
