@@ -1,0 +1,27 @@
+# Fixed CloudFormation template with corrected VTL syntax
+
+# Replace the CreateNote resolver section with this corrected version:
+
+CreateNoteResolver:
+  Type: AWS::AppSync::Resolver
+  Properties:
+    ApiId: !GetAtt NotesApi.ApiId
+    TypeName: Mutation
+    FieldName: createNote
+    DataSourceName: !GetAtt NotesDataSource.Name
+    Kind: UNIT
+    RequestMappingTemplate: |
+      {
+        "version": "2017-02-28",
+        "operation": "PutItem",
+        "key": {
+          "id": $util.dynamodb.toDynamoDBJson($util.autoId())
+        },
+        "attributeValues": {
+          "text": $util.dynamodb.toDynamoDBJson($ctx.args.text),
+          "sentiment": $util.dynamodb.toDynamoDBJson($ctx.args.sentiment),
+          "dateCreated": $util.dynamodb.toDynamoDBJson($util.time.nowISO8601())
+        }
+      }
+    ResponseMappingTemplate: |
+      $util.toJson($ctx.result)

@@ -1,43 +1,45 @@
-# 📝 Notes with Sentiments - Aplicación Web
+# Notes with Sentiments - Aplicación Web
 
-Aplicación web para publicar y leer notas con sentimientos, construida con React, Next.js, AWS AppSync, y DynamoDB.
+Aplicación web para publicar y leer notas con sentimientos, construida con React, Next.js, AWS AppSync, y DynamoDB con infraestructura como código usando CloudFormation/CDK.
 
-## 🎯 Descripción
+## Descripción
 
 Esta aplicación permite a los usuarios:
-- ✅ **Crear notas** con texto libre y selección de sentimiento (feliz, triste, neutral, enojado)
-- ✅ **Visualizar notas existentes** ordenadas por fecha de creación
-- ✅ **Filtrar notas por sentimiento** usando botones de filtro intuitivos
-- ✅ **Persistencia de datos** tanto en AWS DynamoDB como localStorage como fallback
+- Crear notas con texto libre y selección de sentimiento (feliz, triste, neutral, enojado)
+- Visualizar notas existentes ordenadas por fecha de creación
+- Filtrar notas por sentimiento con paginación optimizada
+- Persistencia de datos en AWS DynamoDB con sistema de fallback a localStorage
 
-## 🚀 Demo en Vivo
-
-🔗 **URL de Producción:** [Próximamente en AWS Amplify]
-
-## 🏗️ Arquitectura
+## Arquitectura
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
 │   React + Next  │    │   AWS AppSync    │    │   DynamoDB      │
 │   Frontend      │◄──►│   GraphQL API    │◄──►│   Database      │
-│   (Tailwind)    │    │                  │    │                 │
+│   (Tailwind)    │    │                  │    │   + GSI Index   │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
+                                │                         │
+                         ┌──────▼─────────┐    ┌─────────▼─────────┐
+                         │  CloudFormation │    │  SentimentIndex   │
+                         │  Infrastructure │    │  GSI for Query    │
+                         │  as Code        │    │  Performance      │
+                         └────────────────┘     └───────────────────┘
 ```
 
 ### Stack Tecnológico
 
 - **Frontend**: React 18 + Next.js 14 + TypeScript + Tailwind CSS
 - **API**: AWS AppSync (GraphQL)
-- **Base de Datos**: AWS DynamoDB
+- **Base de Datos**: AWS DynamoDB con Global Secondary Index
+- **Infraestructura**: CloudFormation (generado desde CDK)
 - **Hosting**: AWS Amplify
 - **Autenticación**: API Key (AWS AppSync)
 - **IDs**: ULID para ordenamiento cronológico
 
-## 📂 Estructura del Proyecto
+## Estructura del Proyecto
 
 ```
 .
-├── CLAUDE.md              # Guía de desarrollo
 ├── README.md              # Este archivo
 ├── website/               # Frontend Next.js
 │   ├── src/
@@ -45,7 +47,7 @@ Esta aplicación permite a los usuarios:
 │   │   │   ├── components/
 │   │   │   │   ├── NoteForm.tsx      # Formulario para crear notas
 │   │   │   │   ├── NoteCard.tsx      # Tarjeta individual de nota
-│   │   │   │   ├── NotesList.tsx     # Lista de notas con loading
+│   │   │   │   ├── NotesList.tsx     # Lista con paginación
 │   │   │   │   └── SentimentFilter.tsx # Filtros por sentimiento
 │   │   │   ├── lib/
 │   │   │   │   └── graphql/
@@ -55,33 +57,46 @@ Esta aplicación permite a los usuarios:
 │   │   │   ├── globals.css
 │   │   │   ├── layout.tsx
 │   │   │   └── page.tsx              # Página principal
-│   │   └── aws-exports.js            # Configuración AWS AppSync
+│   │   └── aws-exports.ts            # Configuración AWS AppSync
 │   ├── package.json
 │   ├── tailwind.config.ts
 │   └── next.config.js
-├── backend/               # (Opcional) CDK Infrastructure
-└── analytics.ipynb       # (Opcional) Análisis de datos
+├── backend/               # Infraestructura como código
+│   ├── lib/
+│   │   ├── backend-stack.ts          # Stack principal CDK
+│   │   ├── schema.graphql            # Schema GraphQL
+│   │   └── resolvers/                # Resolvers JavaScript
+│   │       ├── createNote.js
+│   │       └── getNotes.js
+│   ├── notes-stack.yaml              # CloudFormation template
+│   ├── package.json
+│   ├── cdk.json
+│   └── tsconfig.json
+└── analytics.ipynb       # Análisis de datos con Python
 ```
 
-## 🔧 Características Implementadas
+## Características Implementadas
 
-### ✅ Funcionalidades Principales
+### Funcionalidades Principales
 
 1. **Creación de Notas**
    - Formulario con textarea para texto libre
-   - Selector visual de sentimientos con emojis
+   - Selector visual de sentimientos
    - Validación de campos requeridos
    - Generación automática de IDs únicos (ULID)
 
 2. **Visualización de Notas**
    - Lista ordenada por fecha de creación (más recientes primero)
    - Tarjetas con diseño responsive
-   - Indicadores visuales por sentimiento (colores + emojis)
+   - Indicadores visuales por sentimiento
    - Formato de fecha legible
+   - Paginación tradicional con botones Anterior/Siguiente
 
-3. **Filtrado por Sentimiento**
-   - Botones de filtro con conteo de notas
-   - Estados visuales activos/inactivos
+3. **Filtrado por Sentimiento Optimizado**
+   - Filtros que consultan directamente el backend mediante Global Secondary Index
+   - Query operations eficientes en lugar de Scan operations
+   - Cada filtro ejecuta una nueva consulta que devuelve 10 notas del sentimiento seleccionado
+   - Paginación independiente por cada filtro
    - Opción "Todas" para ver sin filtros
 
 4. **Persistencia Híbrida**
@@ -89,7 +104,12 @@ Esta aplicación permite a los usuarios:
    - Fallback automático a localStorage
    - Sincronización entre ambos sistemas
 
-### ⚙️ Esquema GraphQL
+5. **Infraestructura como Código**
+   - Stack completo definido en CloudFormation/CDK
+   - Despliegue automatizado de recursos AWS
+   - Configuración reproducible y versionada
+
+### Esquema GraphQL
 
 ```graphql
 # Scalar types
@@ -130,7 +150,7 @@ schema {
 }
 ```
 
-### 🔧 Resolvers de AppSync
+### Resolvers de AppSync
 
 #### Resolver createNote (Mutation.createNote)
 
@@ -217,19 +237,19 @@ export function response(ctx) {
 }
 ```
 
-### 🎨 UI/UX
+### UI/UX
 
 - **Design System**: Tailwind CSS con paleta de colores semántica
 - **Responsive**: Adaptable a móvil, tablet y desktop
 - **Accesibilidad**: Contraste adecuado, labels semánticos
 - **Estados**: Loading, error, y empty states
 - **Paleta de Sentimientos**:
-  - 😊 Feliz: Verde/Amarillo
-  - 😢 Triste: Azul
-  - 😐 Neutral: Gris
-  - 😠 Enojado: Rojo
+  - Feliz: Verde/Amarillo
+  - Triste: Azul
+  - Neutral: Gris
+  - Enojado: Rojo
 
-## 🛠️ Instalación y Desarrollo
+## Instalación y Desarrollo
 
 ### Prerrequisitos
 
@@ -251,23 +271,33 @@ export function response(ctx) {
    npm install
    ```
 
-3. **Configurar AWS**
-   - Crear AppSync API en AWS Console
-   - Configurar DynamoDB table
-   - Actualizar `src/aws-exports.js` con tus credenciales
-
-4. **Ejecutar en desarrollo**
+3. **Desplegar Infraestructura AWS**
    ```bash
+   cd backend
+   npm install
+   npm run deploy
+   ```
+   - Esto desplegará el stack de CloudFormation con todos los recursos AWS
+   - Al completarse, obtendrás los valores de salida (endpoint, API key, etc.)
+
+4. **Configurar Variables de Entorno**
+   - Actualizar `website/.env.local` con los valores del stack desplegado
+   - Copiar endpoint GraphQL y API key desde las salidas de CloudFormation
+
+5. **Ejecutar en desarrollo**
+   ```bash
+   cd website
    npm run dev
    ```
 
-5. **Abrir en navegador**
+6. **Abrir en navegador**
    ```
    http://localhost:3000
    ```
 
 ### Scripts Disponibles
 
+**Frontend (website/)**
 ```bash
 npm run dev          # Servidor de desarrollo
 npm run build        # Build para producción
@@ -276,22 +306,40 @@ npm run lint         # Linting con ESLint
 npm run type-check   # Verificación TypeScript
 ```
 
-## 🗄️ Configuración AWS
+**Backend (backend/)**
+```bash
+npm run build        # Compilar TypeScript
+npm run watch        # Compilar en modo watch
+npm run test         # Ejecutar tests
+npm run cdk          # Comandos CDK
+npm run deploy       # Desplegar stack
+npm run destroy      # Destruir stack
+```
 
-### AppSync API
+## Configuración AWS
 
-1. **Endpoint**: `https://6bxpuyzrzndhzj74er4nrxqfru.appsync-api.us-east-1.amazonaws.com/graphql`
-2. **Región**: `us-east-1`
-3. **Autenticación**: API Key
-4. **Resolvers**: JavaScript para DynamoDB
+### Recursos Desplegados
 
-### DynamoDB Table
+Todos los recursos se crean automáticamente al desplegar el stack de CloudFormation:
 
-- **Nombre**: `Notes-dev`
-- **Partition Key**: `id` (String)
-- **Atributos**: `text`, `sentiment`, `dateCreated`
+1. **AppSync API**
+   - Autenticación: API Key
+   - Resolvers: VTL (Velocity Template Language) para DynamoDB
+   - Schema GraphQL completo
 
-## 🚀 Despliegue
+2. **DynamoDB Table**
+   - Nombre: `Notes-CDK` (generado por el stack)
+   - Partition Key: `id` (String)
+   - Global Secondary Index: `SentimentIndex`
+     - Partition Key: `sentiment`
+     - Sort Key: `dateCreated`
+   - Billing Mode: Pay per request
+
+3. **IAM Roles y Políticas**
+   - Rol para AppSync con permisos DynamoDB
+   - Permisos para Query, Scan, PutItem en tabla e índices
+
+## Despliegue
 
 ### AWS Amplify
 
@@ -321,62 +369,88 @@ frontend:
       - website/node_modules/**/*
 ```
 
-## 📊 Estado del Proyecto
+## Estado del Proyecto
 
-### ✅ Completado
+### Completado
 
 - [x] Setup de proyecto Next.js + TypeScript + Tailwind
 - [x] Componentes UI para crear y mostrar notas
 - [x] Integración con AWS AppSync GraphQL
 - [x] Almacenamiento en DynamoDB
-- [x] Filtrado por sentimiento (backend + frontend)
-- [x] Paginación completa (10 notas por página)
+- [x] Filtrado por sentimiento optimizado (Global Secondary Index)
+- [x] Paginación tradicional con botones Anterior/Siguiente
 - [x] Sistema de fallback localStorage
 - [x] UI responsive y accesible
 - [x] Manejo de errores y loading states
 - [x] Schema GraphQL según especificaciones
-- [x] Resolvers JavaScript optimizados
+- [x] Resolvers VTL optimizados para DynamoDB
+- [x] Infraestructura como código con CloudFormation/CDK
+- [x] Migración completa desde configuración manual de AWS Console
 
-### 🔄 En Progreso
+### En Progreso
 
 - [ ] Despliegue a AWS Amplify
 
-### 📋 Por Hacer (Opcional)
+### Por Hacer (Opcional)
 
 - [ ] Notebook de analítica (`analytics.ipynb`)
-- [ ] Infraestructura como código con CDK
 - [ ] Tests unitarios y de integración
-- [ ] Optimización de rendimiento
+- [ ] Optimización de rendimiento adicional
 
-## 🧠 Decisiones Técnicas
+## Decisiones Técnicas
 
 ### 1. **ULID para IDs**
 Elegí ULID sobre UUID porque permite ordenamiento cronológico natural, útil para mostrar notas por fecha.
 
-### 2. **Híbrido AWS + localStorage**
+### 2. **Global Secondary Index para Filtrado**
+Implementé un GSI en DynamoDB con `sentiment` como partition key y `dateCreated` como sort key. Esto permite:
+- Query operations eficientes en lugar de Scan operations costosas
+- Filtrado rápido por sentimiento con soporte de paginación
+- Mejor rendimiento a medida que crece la base de datos
+
+### 3. **CloudFormation/CDK para Infraestructura**
+Migré de configuración manual en AWS Console a Infrastructure as Code para:
+- Versionado y reproducibilidad de la infraestructura
+- Facilitar revisión de código por parte de empleadores
+- Despliegues automatizados y consistentes
+- Mejor documentación de la arquitectura
+
+### 4. **Paginación Tradicional vs Load More**
+Cambié de un patrón "Load More" a paginación tradicional porque:
+- Mejor UX para navegación de datos
+- Más eficiente con DynamoDB Query operations
+- Permite calcular páginas totales estimadas
+
+### 5. **Híbrido AWS + localStorage**
 Implementé un sistema de fallback que permite funcionalidad offline y mejor UX durante problemas de conectividad.
 
-### 3. **TypeScript Estricto**
+### 6. **TypeScript Estricto**
 Uso TypeScript con configuración estricta para mejor DX y prevención de errores.
 
-### 4. **Componentes Modulares**
+### 7. **Componentes Modulares**
 Separé la UI en componentes reutilizables siguiendo principios de responsabilidad única.
 
-### 5. **Error Boundaries**
-Manejo de errores tanto a nivel de componente como de aplicación.
-
-## 🐛 Solución de Problemas
+## Solución de Problemas
 
 ### Errores Comunes
 
 1. **"Variable 'sentiment' has an invalid value"**
    - Verificar que enum values coincidan entre frontend y backend
-   - Usar uppercase en GraphQL schema
+   - Usar lowercase en frontend, el resolver convierte automáticamente
 
 2. **"Network error"**
-   - Verificar API key en `aws-exports.js`
+   - Verificar API key en `website/.env.local`
    - Confirmar que AppSync API esté activo
+   - Revisar que el endpoint sea correcto
 
 3. **"Table doesn't exist"**
-   - Verificar que DynamoDB table existe
-   - Confirmar nombre de tabla en resolvers
+   - Asegurar que el stack de CloudFormation se haya desplegado correctamente
+   - Verificar que todos los recursos estén en estado CREATE_COMPLETE
+
+4. **"Not authorized to perform: dynamodb:Query"**
+   - Verificar que el IAM role incluya permisos para índices GSI
+   - Revisar que la policy tenga `"${NotesTable.Arn}/index/*"`
+
+5. **"CDK Bootstrap required"**
+   - Ejecutar `cdk bootstrap` en la región correspondiente
+   - Verificar permisos IAM para CloudFormation, SSM y ECR

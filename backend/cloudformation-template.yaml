@@ -1,0 +1,314 @@
+Resources:
+  NotesTableD0D0D2F1:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      TableName: Notes
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: BackendStack/NotesTable/Resource
+  NotesApi2FFCBC92:
+    Type: AWS::AppSync::GraphQLApi
+    Properties:
+      AuthenticationType: API_KEY
+      Name: notes-sentiment-api
+      XrayEnabled: false
+    Metadata:
+      aws:cdk:path: BackendStack/NotesApi/Resource
+  NotesApiSchema3A74EC4F:
+    Type: AWS::AppSync::GraphQLSchema
+    Properties:
+      ApiId:
+        Fn::GetAtt:
+          - NotesApi2FFCBC92
+          - ApiId
+      Definition: |-
+        type Note {
+            id: ID!
+            text: String!
+            sentiment: Sentiment!
+            dateCreated: AWSDateTime!
+        }
+
+        type NoteQueryResults {
+            items: [Note]
+            nextToken: String
+            scannedCount: Int
+        }
+
+        enum Sentiment {
+            happy
+            sad
+            neutral
+            angry
+        }
+
+        type Mutation {
+            createNote(text: String!, sentiment: Sentiment!): Note
+        }
+
+        type Query {
+            getNotes(sentiment: Sentiment, limit: Int, nextToken: String): NoteQueryResults
+        }
+    Metadata:
+      aws:cdk:path: BackendStack/NotesApi/Schema
+  NotesApiDefaultApiKey8CDD7E27:
+    Type: AWS::AppSync::ApiKey
+    Properties:
+      ApiId:
+        Fn::GetAtt:
+          - NotesApi2FFCBC92
+          - ApiId
+      Expires: 1796438667
+    DependsOn:
+      - NotesApiSchema3A74EC4F
+    Metadata:
+      aws:cdk:path: BackendStack/NotesApi/DefaultApiKey
+  NotesApiNotesDynamoDBDataSourceServiceRole2E260044:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: appsync.amazonaws.com
+        Version: "2012-10-17"
+    Metadata:
+      aws:cdk:path: BackendStack/NotesApi/NotesDynamoDBDataSource/ServiceRole/Resource
+  NotesApiNotesDynamoDBDataSourceServiceRoleDefaultPolicy27DACE62:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:BatchWriteItem
+              - dynamodb:ConditionCheckItem
+              - dynamodb:DeleteItem
+              - dynamodb:DescribeTable
+              - dynamodb:GetItem
+              - dynamodb:GetRecords
+              - dynamodb:GetShardIterator
+              - dynamodb:PutItem
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:UpdateItem
+            Effect: Allow
+            Resource:
+              - Fn::GetAtt:
+                  - NotesTableD0D0D2F1
+                  - Arn
+              - Ref: AWS::NoValue
+        Version: "2012-10-17"
+      PolicyName: NotesApiNotesDynamoDBDataSourceServiceRoleDefaultPolicy27DACE62
+      Roles:
+        - Ref: NotesApiNotesDynamoDBDataSourceServiceRole2E260044
+    Metadata:
+      aws:cdk:path: BackendStack/NotesApi/NotesDynamoDBDataSource/ServiceRole/DefaultPolicy/Resource
+  NotesApiNotesDynamoDBDataSource16E19F46:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId:
+        Fn::GetAtt:
+          - NotesApi2FFCBC92
+          - ApiId
+      DynamoDBConfig:
+        AwsRegion:
+          Ref: AWS::Region
+        TableName:
+          Ref: NotesTableD0D0D2F1
+      Name: NotesDynamoDBDataSource
+      ServiceRoleArn:
+        Fn::GetAtt:
+          - NotesApiNotesDynamoDBDataSourceServiceRole2E260044
+          - Arn
+      Type: AMAZON_DYNAMODB
+    Metadata:
+      aws:cdk:path: BackendStack/NotesApi/NotesDynamoDBDataSource/Resource
+  NotesApiCreateNoteResolverF20F9AF4:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId:
+        Fn::GetAtt:
+          - NotesApi2FFCBC92
+          - ApiId
+      DataSourceName: NotesDynamoDBDataSource
+      FieldName: createNote
+      Kind: UNIT
+      RequestMappingTemplate: "
+
+        \        {
+
+        \          \"version\": \"2017-02-28\",
+
+        \          \"operation\": \"PutItem\",
+
+        \          \"key\": {
+
+        \            \"id\": $util.dynamodb.toDynamoDBJson($util.autoUlid())
+
+        \          },
+
+        \          \"attributeValues\": {
+
+        \            \"text\": $util.dynamodb.toDynamoDBJson($ctx.args.text),
+
+        \            \"sentiment\": $util.dynamodb.toDynamoDBJson($ctx.args.sentiment),
+
+        \            \"dateCreated\": $util.dynamodb.toDynamoDBJson($util.time.nowISO8601())
+
+        \          }
+
+        \        }
+
+        \      "
+      ResponseMappingTemplate: $util.toJson($ctx.result)
+      TypeName: Mutation
+    DependsOn:
+      - NotesApiNotesDynamoDBDataSource16E19F46
+      - NotesApiSchema3A74EC4F
+    Metadata:
+      aws:cdk:path: BackendStack/NotesApi/CreateNoteResolver/Resource
+  NotesApiGetNotesResolver13F993C0:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId:
+        Fn::GetAtt:
+          - NotesApi2FFCBC92
+          - ApiId
+      DataSourceName: NotesDynamoDBDataSource
+      FieldName: getNotes
+      Kind: UNIT
+      RequestMappingTemplate: "
+
+        \        #set($limit = 10)
+
+        \        #if($ctx.args.limit)
+
+        \          #set($limit = $ctx.args.limit)
+
+        \        #end
+
+
+        \        {
+
+        \          \"version\": \"2017-02-28\",
+
+        \          \"operation\": \"Scan\",
+
+        \          \"limit\": $limit,
+
+        \          #if($ctx.args.nextToken)
+
+        \            \"nextToken\": \"$ctx.args.nextToken\",
+
+        \          #end
+
+        \          #if($ctx.args.sentiment)
+
+        \            \"filter\": {
+
+        \              \"expression\": \"sentiment = :sentiment\",
+
+        \              \"expressionValues\": {
+
+        \                \":sentiment\": $util.dynamodb.toDynamoDBJson($ctx.args.sentiment)
+
+        \              }
+
+        \            }
+
+        \          #end
+
+        \        }
+
+        \      "
+      ResponseMappingTemplate: "
+
+        \        #set($items = [])
+
+        \        #foreach($item in $ctx.result.items)
+
+        \          #set($newItem = {})
+
+        \          #set($newItem.id = $item.id)
+
+        \          #set($newItem.text = $item.text)
+
+        \          #set($newItem.dateCreated = $item.dateCreated)
+
+        \          ## Convert sentiment to lowercase
+
+        \          #if($item.sentiment)
+
+        \            #set($newItem.sentiment = $item.sentiment.toLowerCase())
+
+        \          #else
+
+        \            #set($newItem.sentiment = $item.sentiment)
+
+        \          #end
+
+        \          #set($addItem = $items.add($newItem))
+
+        \        #end
+
+
+        \        {
+
+        \          \"items\": $items,
+
+        \          \"nextToken\": #if($ctx.result.nextToken)\"$ctx.result.nextToken\"#else null #end,
+
+        \          \"scannedCount\": #if($ctx.result.scannedCount)$ctx.result.scannedCount #else 0 #end
+
+        \        }
+
+        \      "
+      TypeName: Query
+    DependsOn:
+      - NotesApiNotesDynamoDBDataSource16E19F46
+      - NotesApiSchema3A74EC4F
+    Metadata:
+      aws:cdk:path: BackendStack/NotesApi/GetNotesResolver/Resource
+Outputs:
+  GraphQLApiEndpoint:
+    Description: GraphQL API endpoint
+    Value:
+      Fn::GetAtt:
+        - NotesApi2FFCBC92
+        - GraphQLUrl
+  GraphQLApiKey:
+    Description: GraphQL API key
+    Value:
+      Fn::GetAtt:
+        - NotesApiDefaultApiKey8CDD7E27
+        - ApiKey
+  GraphQLApiId:
+    Description: GraphQL API ID
+    Value:
+      Fn::GetAtt:
+        - NotesApi2FFCBC92
+        - ApiId
+  DynamoDBTableName:
+    Description: DynamoDB table name
+    Value:
+      Ref: NotesTableD0D0D2F1
+  Region:
+    Description: AWS Region
+    Value:
+      Ref: AWS::Region
+Parameters:
+  BootstrapVersion:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /cdk-bootstrap/hnb659fds/version
+    Description: Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]
+

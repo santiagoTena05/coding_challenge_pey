@@ -47,6 +47,8 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false)
   const [nextToken, setNextToken] = useState<string | undefined>(undefined)
   const [hasNextPage, setHasNextPage] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
 
   // Load notes from both AWS and localStorage
   useEffect(() => {
@@ -64,14 +66,18 @@ export default function Home() {
       let newNextToken: string | undefined = undefined
 
       try {
-        console.log('🔍 Fetching notes from AWS DynamoDB...')
+        console.log('🔍 Fetching notes from AWS DynamoDB...', sentiment ? `with filter: ${sentiment}` : 'no filter')
+        const variables: any = {
+          sentiment: sentiment,
+          nextToken: loadMore ? nextToken : undefined
+        }
+
+        // Always use limit of 10 for consistent pagination
+        variables.limit = 10
+
         const result = await client.graphql({
           query: getNotesQuery,
-          variables: {
-            sentiment: sentiment,
-            limit: 10,
-            nextToken: loadMore ? nextToken : undefined
-          },
+          variables: variables,
           authMode: 'apiKey'
         }) as any
 
@@ -80,6 +86,13 @@ export default function Home() {
           newNextToken = result.data.getNotes.nextToken
           setNextToken(newNextToken)
           setHasNextPage(!!newNextToken)
+
+          // Calculate total pages estimate based on scannedCount
+          if (result.data.getNotes.scannedCount && !loadMore) {
+            const estimatedTotal = result.data.getNotes.scannedCount
+            setTotalPages(Math.ceil(estimatedTotal / 10))
+          }
+
           console.log('✅ Loaded', awsNotes.length, 'notes from AWS DynamoDB')
         }
       } catch (awsError) {
@@ -110,12 +123,8 @@ export default function Home() {
         index === self.findIndex(n => n.id === note.id)
       )
 
-      // If loading more, append to existing notes, otherwise replace
-      if (loadMore) {
-        setNotes(prevNotes => [...prevNotes, ...uniqueNotes])
-      } else {
-        setNotes(uniqueNotes)
-      }
+      // Always replace notes for pagination (no more "load more" behavior)
+      setNotes(uniqueNotes)
 
       console.log('📝 Total notes loaded:', uniqueNotes.length)
 
@@ -182,12 +191,26 @@ export default function Home() {
     setSelectedSentiment(sentiment)
     setNotes([]) // Clear existing notes
     setNextToken(undefined) // Reset pagination
+    setCurrentPage(1) // Reset to first page
     loadAllNotes(false, sentiment) // Load fresh data with filter
   }
 
-  const handleLoadMore = () => {
+  const handleNextPage = () => {
     if (hasNextPage && !isLoading) {
+      setCurrentPage(prev => prev + 1)
       loadAllNotes(true, selectedSentiment)
+    }
+  }
+
+  const handlePrevPage = () => {
+    // For simplicity, we'll reload from the beginning and paginate
+    // This is a limitation of DynamoDB's cursor-based pagination
+    if (currentPage > 1 && !isLoading) {
+      setCurrentPage(prev => prev - 1)
+      // Reset and reload (DynamoDB limitation - no true "previous" with cursor pagination)
+      setNextToken(undefined)
+      setNotes([])
+      loadAllNotes(false, selectedSentiment)
     }
   }
 
@@ -230,7 +253,10 @@ export default function Home() {
           notes={sortedNotes}
           isLoading={isLoading}
           hasNextPage={hasNextPage}
-          onLoadMore={handleLoadMore}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onNextPage={handleNextPage}
+          onPrevPage={handlePrevPage}
         />
       </div>
     </div>
